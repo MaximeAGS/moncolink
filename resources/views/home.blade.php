@@ -103,7 +103,7 @@
                             @else
                                 <a class="market-contact-button" href="{{ route('login') }}">Connectez-vous pour contacter <span aria-hidden="true">↗</span></a>
                             @endauth
-                            @if ($canInteractWithAnnonces && (int) auth()->id() !== (int) $annonce->utilisateur_id)
+                            {{-- @if ($canInteractWithAnnonces && (int) auth()->id() !== (int) $annonce->utilisateur_id)
                                 <div class="market-safety-actions">
                                     <form method="POST" action="{{ route('utilisateurs.blocages.store', $annonce->utilisateur) }}" onsubmit="return confirm('Masquer toutes les annonces de ce membre ?')">
                                         @csrf
@@ -134,7 +134,7 @@
                                         </details>
                                     @endif
                                 </div>
-                            @endif
+                            @endif --}}
                         </div>
                     </article>
                 @endforeach
