@@ -181,6 +181,8 @@ Route::middleware('auth')->group(function () {
         ->name('conversations.show');
     Route::post('/conversations/{conversation}/messages', [ConversationController::class, 'storeMessage'])
         ->name('conversations.messages.store');
+    Route::get('/conversations/{conversation}/messages/{message}/piece-jointe', [ConversationController::class, 'attachment'])
+        ->name('conversations.messages.attachment');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

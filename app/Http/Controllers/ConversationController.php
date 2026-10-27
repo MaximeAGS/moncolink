@@ -9,6 +9,7 @@ use App\Models\Message;
 use App\Models\Utilisateur;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ConversationController extends Controller
@@ -98,18 +99,49 @@ class ConversationController extends Controller
         abort_if(BlocageUtilisateur::conflit($userId, $otherUserId), 403);
 
         $validated = $request->validate([
-            'contenu' => ['required', 'string', 'max:5000'],
+            'contenu' => ['nullable', 'required_without:piece_jointe', 'string', 'max:5000'],
+            'piece_jointe' => [
+                'nullable',
+                'required_without:contenu',
+                'file',
+                'max:10240',
+                'mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,odt,txt,rtf,xls,xlsx,csv,ppt,pptx,zip',
+            ],
         ]);
 
-        Message::create([
+        $pieceJointe = $request->file('piece_jointe');
+        $message = Message::create([
             'conversation_id' => $conversation->id,
             'expediteur_id' => $userId,
-            'contenu' => trim($validated['contenu']),
+            'contenu' => isset($validated['contenu']) ? trim($validated['contenu']) : null,
+            'fichier_chemin' => $pieceJointe?->store("conversations/{$conversation->id}", 'local'),
+            'fichier_nom' => $pieceJointe?->getClientOriginalName(),
         ]);
 
         $conversation->update(['dernier_message_le' => now()]);
 
         return redirect()->route('conversations.show', $conversation)->withFragment('messages');
+    }
+
+    public function attachment(Request $request, Conversation $conversation, Message $message)
+    {
+        $userId = $this->memberId($request);
+        $this->participantConversations($userId)->findOrFail($conversation->id);
+        abort_unless((int) $message->conversation_id === (int) $conversation->id, 404);
+        abort_unless($message->fichier_chemin, 404);
+
+        $disk = Storage::disk('local');
+        abort_unless($disk->exists($message->fichier_chemin), 404);
+
+        $mimeType = $disk->mimeType($message->fichier_chemin);
+        if (is_string($mimeType) && str_starts_with($mimeType, 'image/')) {
+            return response()->file($disk->path($message->fichier_chemin), [
+                'Content-Type' => $mimeType,
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
+        }
+
+        return $disk->download($message->fichier_chemin, $message->fichier_nom);
     }
 
     private function memberId(Request $request): int

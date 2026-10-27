@@ -7,6 +7,8 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Utilisateur;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ConversationTest extends TestCase
@@ -81,6 +83,71 @@ class ConversationTest extends TestCase
             ->assertSee('Bonjour, votre annonce est-elle toujours disponible ?');
 
         $this->assertNotNull($message->fresh()->lu_le);
+    }
+
+    public function test_participants_can_send_and_view_an_image_attachment(): void
+    {
+        Storage::fake('local');
+        $author = $this->createUtilisateur('attachment-author@example.com');
+        $visitor = $this->createUtilisateur('attachment-visitor@example.com');
+        $annonce = $this->createPublishedAnnonce($author);
+
+        $this->actingAs($visitor)->post(route('annonces.conversations.store', $annonce));
+        $conversation = Conversation::sole();
+
+        $this->post(route('conversations.messages.store', $conversation), [
+            'piece_jointe' => UploadedFile::fake()->image('chambre.png'),
+        ])->assertRedirect(route('conversations.show', $conversation).'#messages');
+
+        $message = Message::sole();
+        $this->assertNull($message->contenu);
+        $this->assertSame('chambre.png', $message->fichier_nom);
+        Storage::disk('local')->assertExists($message->fichier_chemin);
+
+        $attachmentUrl = route('conversations.messages.attachment', [$conversation, $message]);
+        $this->get($attachmentUrl)
+            ->assertOk()
+            ->assertHeader('Content-Type', 'image/png');
+
+        $this->actingAs($author)
+            ->get(route('conversations.show', $conversation))
+            ->assertOk()
+            ->assertSee('chambre.png')
+            ->assertSee($attachmentUrl);
+
+        $stranger = $this->createUtilisateur('attachment-stranger@example.com');
+        $this->actingAs($stranger)
+            ->get($attachmentUrl)
+            ->assertNotFound();
+    }
+
+    public function test_attachment_uploads_require_a_message_or_a_supported_file(): void
+    {
+        $author = $this->createUtilisateur('invalid-attachment-author@example.com');
+        $visitor = $this->createUtilisateur('invalid-attachment-visitor@example.com');
+        $annonce = $this->createPublishedAnnonce($author);
+
+        $this->actingAs($visitor)->post(route('annonces.conversations.store', $annonce));
+        $conversation = Conversation::sole();
+
+        $this->post(route('conversations.messages.store', $conversation), [])
+            ->assertSessionHasErrors(['contenu', 'piece_jointe']);
+
+        $this->post(route('conversations.messages.store', $conversation), [
+            'piece_jointe' => UploadedFile::fake()->create('script.exe', 10),
+        ])->assertSessionHasErrors('piece_jointe');
+
+        $this->assertDatabaseCount('messages', 0);
+
+        $this->post(route('conversations.messages.store', $conversation), [
+            'piece_jointe' => UploadedFile::fake()->create('reglement.pdf', 100, 'application/pdf'),
+        ])->assertRedirect(route('conversations.show', $conversation).'#messages');
+
+        $message = Message::sole();
+        $this->assertSame('reglement.pdf', $message->fichier_nom);
+        $this->get(route('conversations.messages.attachment', [$conversation, $message]))
+            ->assertOk()
+            ->assertHeader('Content-Disposition', 'attachment; filename=reglement.pdf');
     }
 
     public function test_non_participants_cannot_read_or_send_messages(): void

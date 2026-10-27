@@ -35,7 +35,22 @@
                             <strong>{{ $isOwnMessage ? 'Vous' : $interlocuteur->nom_complet }}</strong>
                             <time datetime="{{ $message->created_at->toIso8601String() }}">{{ $message->created_at->format('d/m/Y · H:i') }}</time>
                         </div>
-                        <p>{{ $message->contenu }}</p>
+                        @if ($message->contenu)
+                            <p>{{ $message->contenu }}</p>
+                        @endif
+                        @if ($message->fichier_chemin)
+                            @php($attachmentUrl = route('conversations.messages.attachment', [$conversation, $message]))
+                            <div class="conversation-attachment">
+                                @if (str_starts_with((string) \Illuminate\Support\Facades\Storage::disk('local')->mimeType($message->fichier_chemin), 'image/'))
+                                    <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener">
+                                        <img src="{{ $attachmentUrl }}" alt="Image jointe : {{ $message->fichier_nom }}">
+                                    </a>
+                                @endif
+                                <a class="conversation-attachment-link" href="{{ $attachmentUrl }}">
+                                    <span aria-hidden="true">📎</span> {{ $message->fichier_nom }}
+                                </a>
+                            </div>
+                        @endif
                     </article>
                 @empty
                     <div class="conversation-first-message">
@@ -54,11 +69,14 @@
                     @endif
                 </div>
             @else
-                <form class="conversation-composer" method="POST" action="{{ route('conversations.messages.store', $conversation) }}">
+                <form class="conversation-composer" method="POST" enctype="multipart/form-data" action="{{ route('conversations.messages.store', $conversation) }}">
                     @csrf
                     <label class="sr-only" for="contenu">Votre message</label>
-                    <textarea id="contenu" name="contenu" rows="3" maxlength="5000" placeholder="Écrivez votre message…" required>{{ old('contenu') }}</textarea>
+                    <textarea id="contenu" name="contenu" rows="3" maxlength="5000" placeholder="Écrivez votre message…">{{ old('contenu') }}</textarea>
                     @error('contenu')<p class="conversation-error">{{ $message }}</p>@enderror
+                    <label class="conversation-attachment-input" for="piece_jointe">Joindre une image ou un fichier (10 Mo max.)</label>
+                    <input id="piece_jointe" name="piece_jointe" type="file" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.odt,.txt,.rtf,.xls,.xlsx,.csv,.ppt,.pptx,.zip">
+                    @error('piece_jointe')<p class="conversation-error">{{ $message }}</p>@enderror
                     <div class="conversation-composer-footer">
                         <span>Restez respectueux et ne partagez pas d’informations sensibles.</span>
                         <button class="conversation-send-button" type="submit">Envoyer <span aria-hidden="true">↗</span></button>

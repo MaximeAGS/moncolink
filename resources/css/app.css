@@ -186,6 +186,12 @@ body { font-family: 'DM Sans', sans-serif; letter-spacing: 0; }
 .conversation-message-meta strong { color: var(--coloc-ink); font-size: 9px; }
 .conversation-message p { background: #f0f4ef; border-radius: 3px 10px 10px 10px; color: #34463e; font-size: 11px; line-height: 1.65; margin: 0; overflow-wrap: anywhere; padding: 10px 13px; white-space: pre-wrap; }
 .conversation-message.is-own p { background: #dfece2; border-radius: 10px 3px 10px 10px; }
+.conversation-attachment { background: #f0f4ef; border-radius: 8px; margin-top: 6px; max-width: 100%; overflow: hidden; padding: 8px; }
+.conversation-message.is-own .conversation-attachment { background: #dfece2; }
+.conversation-attachment img { border-radius: 5px; display: block; max-height: 280px; max-width: min(100%, 360px); object-fit: contain; }
+.conversation-attachment-link { color: var(--coloc-green); display: inline-block; font-size: 10px; overflow-wrap: anywhere; padding: 5px 2px 2px; }
+.conversation-attachment-input { color: #526158; display: block; font-size: 9px; margin-top: 9px; }
+.conversation-composer input[type="file"] { color: #78847c; font: inherit; font-size: 9px; margin-top: 4px; max-width: 100%; }
 .conversation-first-message { align-self: center; color: #738077; font-size: 10px; line-height: 1.6; margin: auto; max-width: 350px; text-align: center; }
 .conversation-first-message > span { color: var(--coloc-green); font-size: 22px; }
 .conversation-composer { background: #fbfcfa; border-top: 1px solid var(--coloc-line); padding: 13px 16px 15px; }

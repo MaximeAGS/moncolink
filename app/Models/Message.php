@@ -12,6 +12,8 @@ class Message extends Model
         'conversation_id',
         'expediteur_id',
         'contenu',
+        'fichier_chemin',
+        'fichier_nom',
         'lu_le',
     ];
 
